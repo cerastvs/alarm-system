@@ -10,14 +10,22 @@ const CONFIG = {
     BREAK_DURATION_DEFAULT_MS: 10 * 60 * 1000, // 10 Minutes
 };
 
+const MOCK_USERS = [
+    { username: 'admin', password: '123', name: 'Admin User', dept: 'IT', role: 'admin' },
+    { username: 'user1', password: '123', name: 'John Doe', dept: 'Sales', role: 'user' },
+    { username: 'user2', password: '123', name: 'Jane Smith', dept: 'Marketing', role: 'user' }
+];
+
 // --- State Management ---
 const state = {
     currentView: 'login-view',
     timerInterval: null,
     remainingTime: 0,
     isWorkSession: false,
+    isPaused: false, // New state for pause
+    workTimerStatus: 'Ready', // 'Running', 'Paused', 'Ready'
     currentActivity: null,
-    currentUser: { name: '', dept: '' },
+    currentUser: null, // { username, name, dept, role }
     logs: JSON.parse(localStorage.getItem('ewms_logs')) || [],
 };
 
@@ -41,15 +49,26 @@ const elements = {
     complianceRateStat: document.getElementById('compliance-rate-stat'),
     userDisplay: document.getElementById('user-display'),
     loginForm: document.getElementById('login-form'),
-    nameInput: document.getElementById('employee-name'),
-    deptInput: document.getElementById('employee-dept'),
+    usernameInput: document.getElementById('username'),
+    passwordInput: document.getElementById('password'),
     proofInput: document.getElementById('break-proof'),
     feedbackInput: document.getElementById('break-feedback'),
     startWorkBtn: document.getElementById('start-work-btn'),
+    pauseBtn: document.getElementById('pause-btn'), // New
+    resumeBtn: document.getElementById('resume-btn'), // New
     logoutBtn: document.getElementById('logout-btn'),
+    viewLogsBtn: document.getElementById('view-logs-btn'),
+    closeAdminBtn: document.getElementById('close-admin-btn'),
     timerStatus: document.getElementById('timer-status'),
     debugBreakBtn: document.getElementById('debug-break-btn'),
 };
+
+function updateDashboardForRole() {
+    // Both admins and users can view logs now, but the content differs.
+    // We could hide the button for users if we wanted, but the requirement says "dashboard will only display the activity log made by THAT user".
+    // So we keep the button for everyone.
+    elements.viewLogsBtn.style.display = 'block';
+}
 
 // ... (AlarmService, NotificationService, ViewManager remain the same) ...
 
@@ -149,8 +168,8 @@ function switchView(viewId) {
     // Hide all views
     Object.values(views).forEach(el => {
         if (el && !el.classList.contains('modal')) { // Don't hide modal via this loop if it's separate
-             el.classList.remove('active');
-             el.classList.add('hidden');
+            el.classList.remove('active');
+            el.classList.add('hidden');
         }
     });
 
@@ -191,7 +210,7 @@ function startWorkTimer() {
     state.isWorkSession = true;
     state.remainingTime = CONFIG.WORK_DURATION_MS;
     updateTimerDisplay(elements.workTimerDisplay);
-    
+
     // UI Updates
     elements.startWorkBtn.style.display = 'none';
     elements.debugBreakBtn.style.display = 'block';
@@ -215,7 +234,7 @@ function resetWorkDashboard() {
     state.isWorkSession = false;
     state.remainingTime = CONFIG.WORK_DURATION_MS;
     updateTimerDisplay(elements.workTimerDisplay);
-    
+
     // UI Updates
     elements.startWorkBtn.style.display = 'block';
     elements.debugBreakBtn.style.display = 'none';
@@ -261,20 +280,31 @@ function finishBreak() {
 // Login
 elements.loginForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    const name = elements.nameInput.value.trim();
-    const dept = elements.deptInput.value.trim();
+    const username = elements.usernameInput.value.trim();
+    const password = elements.passwordInput.value.trim();
 
-    if (name) {
-        state.currentUser = { name, dept };
-        elements.userDisplay.textContent = `Logged in as ${name}${dept ? ' (' + dept + ')' : ''}`;
-        
+    const user = MOCK_USERS.find(u => u.username === username && u.password === password);
+
+    if (user) {
+        state.currentUser = user;
+        elements.userDisplay.textContent = `Logged in as ${user.name}${user.dept ? ' (' + user.dept + ')' : ''}`;
+
         // Initialize Audio Context on user gesture
         AlarmService.init();
         // Request Notification Permission
         NotificationService.requestPermission();
-        
-        switchView('dashboard-view');
-        resetWorkDashboard(); // Ensure dashboard is in "Ready" state
+
+        if (user.role === 'admin') {
+            renderActivityLogs();
+            switchView('admin-view');
+        } else {
+            switchView('dashboard-view');
+            resetWorkDashboard(); // Ensure dashboard is in "Ready" state
+            // Update dashboard UI based on role
+            updateDashboardForRole();
+        }
+    } else {
+        alert('Invalid credentials');
     }
 });
 
@@ -287,8 +317,8 @@ elements.startWorkBtn.addEventListener('click', () => {
 elements.logoutBtn.addEventListener('click', () => {
     if (state.timerInterval) clearInterval(state.timerInterval);
     state.currentUser = { name: '', dept: '' };
-    elements.nameInput.value = '';
-    elements.deptInput.value = '';
+    elements.usernameInput.value = '';
+    elements.passwordInput.value = '';
     switchView('login-view');
 });
 
@@ -310,7 +340,7 @@ document.querySelectorAll('.activity-card').forEach(card => {
         const name = card.querySelector('h3').textContent;
         state.currentActivity = name;
         elements.activityNameDisplay.textContent = name;
-        
+
         let duration = CONFIG.BREAK_DURATION_DEFAULT_MS;
         if (activity === 'Air Quality Check') duration = 5 * 60 * 1000;
         if (activity === 'Walking' || activity === 'Socializing' || activity === 'Quick Nap') duration = 15 * 60 * 1000;
@@ -329,13 +359,13 @@ document.getElementById('finish-break-early-btn').addEventListener('click', () =
 // Compliance Form
 document.getElementById('compliance-form').addEventListener('submit', (e) => {
     e.preventDefault();
-    
+
     const file = elements.proofInput.files[0];
     const feedback = elements.feedbackInput.value.trim();
-    
+
     if (file) {
         const reader = new FileReader();
-        reader.onload = function(event) {
+        reader.onload = function (event) {
             const base64String = event.target.result;
             saveLog(file.name, base64String, feedback);
         };
@@ -356,7 +386,7 @@ function saveLog(fileName, fileData, feedback) {
         feedback: feedback || 'No feedback',
         completed: true
     };
-    
+
     try {
         state.logs.push(log);
         localStorage.setItem('ewms_logs', JSON.stringify(state.logs));
@@ -376,22 +406,50 @@ function saveLog(fileName, fileData, feedback) {
 
     // Return to Work
     switchView('dashboard-view');
-    startWorkTimer();
+    resetWorkDashboard();
 }
 
-// Admin
-document.getElementById('admin-toggle').addEventListener('click', () => {
-    renderAdminStats();
+// View Logs
+elements.viewLogsBtn.addEventListener('click', () => {
+    renderActivityLogs();
     switchView('admin-view');
 });
 
-document.getElementById('close-admin-btn').addEventListener('click', () => {
-    switchView(state.isWorkSession ? 'dashboard-view' : 'login-view');
+elements.closeAdminBtn.addEventListener('click', () => {
+    if (state.currentUser && state.currentUser.role === 'admin') {
+        // Admin logout
+        state.currentUser = null;
+        elements.usernameInput.value = '';
+        elements.passwordInput.value = '';
+        switchView('login-view');
+    } else {
+        // Regular user returns to dashboard
+        switchView(state.isWorkSession ? 'dashboard-view' : 'login-view');
+        // Note: The original logic had a fallback to login-view if not work session, 
+        // but for a logged-in user viewing logs, they should go back to dashboard unless they logged out.
+        // However, if they are viewing logs, they are logged in.
+        // Let's be safer:
+        if (state.currentUser) {
+            switchView('dashboard-view');
+        } else {
+            switchView('login-view');
+        }
+    }
 });
 
-function renderAdminStats() {
-    elements.totalBreaksStat.textContent = state.logs.length;
-    elements.logsList.innerHTML = state.logs.map(log => `
+function renderActivityLogs() {
+    let logsToShow = state.logs;
+
+    if (state.currentUser.role !== 'admin') {
+        // Filter for plain users
+        logsToShow = state.logs.filter(log => log.user.username === state.currentUser.username);
+        elements.closeAdminBtn.textContent = "Close";
+    } else {
+        elements.closeAdminBtn.textContent = "Log Out";
+    }
+
+    elements.totalBreaksStat.textContent = logsToShow.length;
+    elements.logsList.innerHTML = logsToShow.map(log => `
         <li style="flex-direction: column; gap: 0.5rem; align-items: flex-start;">
             <div style="display: flex; justify-content: space-between; width: 100%;">
                 <span style="font-weight: bold; color: var(--primary-color)">${log.user.name} <small style="color: #94a3b8">(${log.user.dept || 'N/A'})</small></span>
