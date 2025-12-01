@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EWMS - Employee Wellbeing Monitoring System</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Login View -->
+    <section id="login-view" class="view active">
+        <div class="glass-panel login-panel">
+            <h1>EWMS</h1>
+            <p>Employee Wellbeing Monitoring System</p>
+            <form id="login-form" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1rem;">
+                <input type="text" id="employee-name" placeholder="Full Name" required class="input-field">
+                <input type="text" id="employee-dept" placeholder="Department (Optional)" class="input-field">
+                <button type="submit" class="btn primary">Start Work Session</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Work Dashboard View -->
+    <section id="dashboard-view" class="view hidden">
+        <header class="top-bar">
+            <div class="logo">EWMS</div>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <div class="user-info" id="user-display">Logged in as Employee</div>
+                <button id="logout-btn" class="btn secondary" style="font-size: 0.8rem; padding: 6px 12px;">Log Out</button>
+            </div>
+        </header>
+        <main class="dashboard-content">
+            <div class="timer-card glass-panel">
+                <h2>Work Session</h2>
+                <div class="timer-display" id="work-timer">02:00:00</div>
+                <p class="status-text" id="timer-status">Ready to start?</p>
+                
+                <button id="start-work-btn" class="btn primary" style="margin-top: 1rem; width: 100%;">Start Work</button>
+                
+                <div class="progress-ring">
+                    <!-- SVG Ring would go here -->
+                </div>
+                <button id="debug-break-btn" class="btn secondary" style="margin-top: 2rem; opacity: 0.7; display: none;">Test: Finish Work Early</button>
+            </div>
+        </main>
+    </section>
+
+    <!-- Break Notification Modal -->
+    <div id="break-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>Time for a Break!</h2>
+            <p>You've been working for 2 hours. It's time to recharge.</p>
+            <button id="start-break-btn" class="btn primary">Choose Activity</button>
+        </div>
+    </div>
+
+    <!-- Activity Selector View -->
+    <section id="activity-view" class="view hidden">
+        <h2>Select a Wellness Activity</h2>
+        <div class="activity-grid">
+            <div class="activity-card glass-panel" data-activity="Walking">
+                <h3>Walking</h3>
+                <p>15 Minutes</p>
+            </div>
+            <div class="activity-card glass-panel" data-activity="Stretching">
+                <h3>Stretching</h3>
+                <p>10 Minutes</p>
+            </div>
+            <div class="activity-card glass-panel" data-activity="Air Quality Check">
+                <h3>Indoor Air Quality Check</h3>
+                <p>5 Minutes</p>
+            </div>
+            <div class="activity-card glass-panel" data-activity="Quick Nap">
+                <h3>Quick Nap</h3>
+                <p>15 Minutes</p>
+            </div>
+            <div class="activity-card glass-panel" data-activity="Decluttering">
+                <h3>Decluttering</h3>
+                <p>10 Minutes</p>
+            </div>
+            <div class="activity-card glass-panel" data-activity="Socializing">
+                <h3>Socializing</h3>
+                <p>15 Minutes</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Active Break View -->
+    <section id="break-timer-view" class="view hidden">
+        <div class="glass-panel center-panel">
+            <h2 id="current-activity-name">Activity</h2>
+            <div class="timer-display" id="break-timer">10:00</div>
+            <p>Relax and recharge...</p>
+            <button id="finish-break-early-btn" class="btn secondary">Finish Early</button>
+        </div>
+    </section>
+
+    <!-- Compliance View -->
+    <section id="compliance-view" class="view hidden">
+        <div class="glass-panel center-panel">
+            <h2>Break Complete</h2>
+            <p>Please confirm you completed the activity.</p>
+            <form id="compliance-form" style="display: flex; flex-direction: column; gap: 1.5rem; align-items: flex-start;">
+                
+                <div class="file-upload-container" style="width: 100%;">
+                    <label for="break-proof" style="display: block; margin-bottom: 0.5rem; color: #94a3b8;">Upload Proof of Activity (Photo/Log)</label>
+                    <input type="file" id="break-proof" accept="image/*, .pdf" required class="input-field">
+                </div>
+
+                <div class="feedback-container" style="width: 100%;">
+                    <label for="break-feedback" style="display: block; margin-bottom: 0.5rem; color: #94a3b8;">How was your break? (Optional)</label>
+                    <textarea id="break-feedback" class="input-field" rows="3" placeholder="Share your experience..."></textarea>
+                </div>
+
+                <label class="checkbox-container">
+                    <input type="checkbox" required>
+                    <span class="checkmark"></span>
+                    I confirm that I have taken my wellness break.
+                </label>
+                <button type="submit" class="btn primary" style="width: 100%;">Submit & Resume Work</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Admin Dashboard View (Accessible via secret key or button for demo) -->
+    <button id="admin-toggle" class="admin-toggle">View Dashboard</button>
+    <section id="admin-view" class="view hidden">
+        <header class="top-bar">
+            <div class="logo">EWMS Admin</div>
+            <button id="close-admin-btn" class="btn secondary">Close</button>
+        </header>
+        <main class="admin-content">
+            <div class="stats-grid">
+                <div class="stat-card glass-panel">
+                    <h3>Total Breaks</h3>
+                    <p id="total-breaks-stat">0</p>
+                </div>
+                <div class="stat-card glass-panel">
+                    <h3>Compliance Rate</h3>
+                    <p id="compliance-rate-stat">100%</p>
+                </div>
+            </div>
+            <div class="logs-panel glass-panel">
+                <h3>Activity Logs</h3>
+                <ul id="activity-logs-list">
+                    <!-- Logs will be injected here -->
+                </ul>
+            </div>
+        </main>
+    </section>
+
+    <script src="script.js"></script>
+</body>
+</html>
