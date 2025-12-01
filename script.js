@@ -13,7 +13,7 @@ const CONFIG = {
 const MOCK_USERS = [
     { username: 'admin', password: '123', name: 'Admin User', dept: 'IT', role: 'admin' },
     { username: 'user1', password: '123', name: 'John Doe', dept: 'Sales', role: 'user' },
-    { username: 'user2', password: '123', name: 'Jane Smith', dept: 'Marketing', role: 'user' }
+    { username: 'user2', password: '123', name: 'Jon Snow', dept: 'Human Resource', role: 'user' }
 ];
 
 // --- State Management ---
@@ -27,6 +27,8 @@ const state = {
     currentActivity: null,
     currentUser: null, // { username, name, dept, role }
     logs: JSON.parse(localStorage.getItem('ewms_logs')) || [],
+    workStartTime: null, // Track when work session started
+    breakStartTime: null, // Track when break started
 };
 
 // --- DOM Elements ---
@@ -61,6 +63,7 @@ const elements = {
     closeAdminBtn: document.getElementById('close-admin-btn'),
     timerStatus: document.getElementById('timer-status'),
     debugBreakBtn: document.getElementById('debug-break-btn'),
+    skipBreakBtn: document.getElementById('skip-break-btn'),
 };
 
 function updateDashboardForRole() {
@@ -210,6 +213,7 @@ function startWorkTimer() {
     state.isWorkSession = true;
     state.isPaused = false;
     state.remainingTime = CONFIG.WORK_DURATION_MS;
+    state.workStartTime = new Date(); // Record work start time
     updateTimerDisplay(elements.workTimerDisplay);
 
     // UI Updates
@@ -281,6 +285,7 @@ function resetWorkDashboard() {
 function startBreakTimer(durationMs) {
     state.isWorkSession = false;
     state.remainingTime = durationMs;
+    state.breakStartTime = new Date(); // Record break start time
     updateTimerDisplay(elements.breakTimerDisplay);
 
     if (state.timerInterval) clearInterval(state.timerInterval);
@@ -380,6 +385,11 @@ document.getElementById('start-break-btn').addEventListener('click', () => {
     switchView('activity-view');
 });
 
+// Modal: Skip Break
+elements.skipBreakBtn.addEventListener('click', () => {
+    skipBreak();
+});
+
 // Activity Selection
 document.querySelectorAll('.activity-card').forEach(card => {
     card.addEventListener('click', () => {
@@ -423,6 +433,11 @@ document.getElementById('compliance-form').addEventListener('submit', (e) => {
 });
 
 function saveLog(fileName, fileData, feedback) {
+    // Calculate durations
+    const breakEndTime = new Date();
+    const workDurationMs = state.workStartTime ? (new Date() - state.workStartTime) : CONFIG.WORK_DURATION_MS;
+    const breakDurationMs = state.breakStartTime ? (breakEndTime - state.breakStartTime) : 0;
+
     // Log Data
     const log = {
         date: new Date().toISOString(),
@@ -431,7 +446,12 @@ function saveLog(fileName, fileData, feedback) {
         proof: fileName,
         proofData: fileData, // Store Base64 string
         feedback: feedback || 'No feedback',
-        completed: true
+        completed: true,
+        skipped: false,
+        workDuration: formatTime(workDurationMs), // Human-readable format
+        breakDuration: formatTime(breakDurationMs), // Human-readable format
+        workDurationMs: workDurationMs, // Raw milliseconds for calculations
+        breakDurationMs: breakDurationMs // Raw milliseconds for calculations
     };
 
     try {
@@ -454,6 +474,43 @@ function saveLog(fileName, fileData, feedback) {
     // Return to Work
     switchView('dashboard-view');
     resetWorkDashboard();
+}
+
+function skipBreak() {
+    // Calculate work duration
+    const workDurationMs = state.workStartTime ? (new Date() - state.workStartTime) : CONFIG.WORK_DURATION_MS;
+
+    // Log skipped break
+    const log = {
+        date: new Date().toISOString(),
+        user: state.currentUser,
+        activity: 'Skipped',
+        proof: 'N/A',
+        proofData: null,
+        feedback: 'Break was skipped',
+        completed: false,
+        skipped: true,
+        workDuration: formatTime(workDurationMs),
+        breakDuration: '00:00',
+        workDurationMs: workDurationMs,
+        breakDurationMs: 0
+    };
+
+    state.logs.push(log);
+    localStorage.setItem('ewms_logs', JSON.stringify(state.logs));
+
+    // Return to Work
+    switchView('dashboard-view');
+    resetWorkDashboard();
+}
+
+function calculateComplianceRate(logs) {
+    if (logs.length === 0) return 100;
+
+    const completedBreaks = logs.filter(log => log.completed === true).length;
+    const totalBreaks = logs.length;
+
+    return Math.round((completedBreaks / totalBreaks) * 100);
 }
 
 // View Logs
@@ -496,6 +553,7 @@ function renderActivityLogs() {
     }
 
     elements.totalBreaksStat.textContent = logsToShow.length;
+    elements.complianceRateStat.textContent = calculateComplianceRate(logsToShow) + '%';
     elements.logsList.innerHTML = logsToShow.map(log => `
         <li style="flex-direction: column; gap: 0.5rem; align-items: flex-start;">
             <div style="display: flex; justify-content: space-between; width: 100%;">
@@ -504,8 +562,10 @@ function renderActivityLogs() {
             </div>
             <div style="display: flex; justify-content: space-between; width: 100%; align-items: flex-start;">
                 <div style="display: flex; flex-direction: column; gap: 0.2rem;">
-                    <span>Activity: ${log.activity}</span>
+                    <span>Activity: ${log.activity} ${log.skipped ? '<span style="color: #ef4444; font-weight: bold;">(SKIPPED)</span>' : ''}</span>
                     <span style="font-size: 0.9rem; color: #cbd5e1; font-style: italic;">"${log.feedback}"</span>
+                    ${log.workDuration ? `<span style="font-size: 0.85rem; color: #10b981;">⏱️ Work: ${log.workDuration}</span>` : ''}
+                    ${log.breakDuration && !log.skipped ? `<span style="font-size: 0.85rem; color: #f59e0b;">☕ Break: ${log.breakDuration}</span>` : ''}
                 </div>
                 <div style="text-align: right;">
                     <span style="color: #94a3b8; display: block;">Proof: ${log.proof}</span>
