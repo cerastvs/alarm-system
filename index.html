@@ -13,10 +13,8 @@
 
 <body>
 
-    <!-- Toast Notification Container -->
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- Login View -->
     <section id="login-view" class="view active">
         <div class="glass-panel login-panel">
             <h1>EWMS</h1>
@@ -29,40 +27,53 @@
         </div>
     </section>
 
-    <!-- Work Dashboard View -->
     <section id="dashboard-view" class="view hidden">
         <header class="top-bar">
-            <div class="logo">EWMS</div>
-            <div style="display: flex; gap: 1rem; align-items: center;">
-                <button id="view-logs-btn" class="btn secondary" style="font-size: 0.8rem; padding: 6px 12px;">View
-                    Activity Logs</button>
-                <div class="user-info" id="user-display">Logged in as Employee</div>
-                <button id="logout-btn" class="btn secondary" style="font-size: 0.8rem; padding: 6px 12px;">Log
-                    Out</button>
+            <div class="logo-container">
+                <div class="logo-icon">E</div>
+                <div class="logo">EWMS</div>
+            </div>
+            <div class="nav-actions">
+                <button id="logout-btn" class="btn ghost" title="Log Out">
+                    <span class="btn-text">Log Out</span> <span class="btn-icon">🚪</span>
+                </button>
             </div>
         </header>
         <main class="dashboard-content">
-            <div class="timer-card glass-panel">
-                <h2>Work Session</h2>
-                <div class="timer-display" id="work-timer">02:00:00</div>
-                <p class="status-text" id="timer-status">Ready to start?</p>
-
-                <div class="timer-controls" style="width: 100%; margin-top: 1rem;">
-                    <button id="start-work-btn" class="btn primary" style="width: 100%;">Start Work</button>
-                    <button id="pause-btn" class="btn secondary" style="display: none; width: 100%;">Pause</button>
-                    <button id="resume-btn" class="btn primary" style="display: none; width: 100%;">Resume</button>
+            <div class="dashboard-container">
+                <div class="user-welcome-section glass-panel">
+                    <div class="avatar-large" id="user-avatar">JD</div>
+                    <div class="welcome-text">
+                        <p class="greeting">Welcome back,</p>
+                        <h2 id="user-display">Employee</h2>
+                        <span class="user-role-label">User</span>
+                    </div>
                 </div>
 
-                <div class="progress-ring">
-                    <!-- SVG Ring would go here -->
+                <div class="timer-card glass-panel">
+                    <h2>Work Session</h2>
+                    <div class="timer-display" id="work-timer">02:00:00</div>
+                    <p class="status-text" id="timer-status">Ready to start?</p>
+
+                    <div class="timer-controls" style="width: 100%; margin-top: 1rem;">
+                        <button id="start-work-btn" class="btn primary" style="width: 100%;">Start Work</button>
+                        <button id="pause-btn" class="btn secondary" style="display: none; width: 100%;">Pause</button>
+                        <button id="resume-btn" class="btn primary" style="display: none; width: 100%;">Resume</button>
+                    </div>
+
+                    <div class="progress-ring"></div>
+                    <button id="debug-break-btn" class="btn secondary"
+                        style="margin-top: 2rem; opacity: 0.7; display: none;">Test: Finish Work Early</button>
                 </div>
-                <button id="debug-break-btn" class="btn secondary"
-                    style="margin-top: 2rem; opacity: 0.7; display: none;">Test: Finish Work Early</button>
+
+                <button id="view-logs-btn" class="btn secondary glass-panel"
+                    style="width: 100%; margin-top: 1rem; display: flex; justify-content: center; gap: 0.5rem;">
+                    <span>📋</span> View Activity Logs
+                </button>
             </div>
         </main>
     </section>
 
-    <!-- Break Notification Modal -->
     <div id="break-modal" class="modal hidden">
         <div class="modal-content glass-panel">
             <h2>Time for a Break!</h2>
@@ -74,7 +85,13 @@
         </div>
     </div>
 
-    <!-- Activity Selector View -->
+    <div id="activity-detail-modal" class="modal hidden">
+        <div class="modal-content glass-panel activity-detail-content">
+            <button id="close-detail-modal" class="close-modal-btn" title="Close">✕</button>
+            <div id="activity-detail-body"></div>
+        </div>
+    </div>
+
     <section id="activity-view" class="view hidden">
         <h2>Select a Wellness Activity</h2>
         <div class="activity-grid">
@@ -105,7 +122,6 @@
         </div>
     </section>
 
-    <!-- Active Break View -->
     <section id="break-timer-view" class="view hidden">
         <div class="glass-panel center-panel">
             <h2 id="current-activity-name">Activity</h2>
@@ -115,7 +131,6 @@
         </div>
     </section>
 
-    <!-- Compliance View -->
     <section id="compliance-view" class="view hidden">
         <div class="glass-panel center-panel">
             <h2>Break Complete</h2>
@@ -146,7 +161,6 @@
         </div>
     </section>
 
-    <!-- Admin Dashboard View (Accessible via secret key or button for demo) -->
     <section id="admin-view" class="view hidden">
         <header class="top-bar">
             <div class="logo">EWMS Admin</div>
@@ -169,9 +183,7 @@
             </div>
             <div class="logs-panel glass-panel">
                 <h3>Activity Logs</h3>
-                <ul id="activity-logs-list">
-                    <!-- Logs will be injected here -->
-                </ul>
+                <ul id="activity-logs-list"></ul>
             </div>
         </main>
     </section>

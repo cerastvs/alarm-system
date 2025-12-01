@@ -1,13 +1,7 @@
-/**
- * EWMS - Employee Wellbeing Monitoring System
- * Core Logic
- */
 
-// --- Configuration ---
 const CONFIG = {
-    WORK_DURATION_MS: 2 * 60 * 60 * 1000, // 2 Hours
-    // WORK_DURATION_MS: 5 * 1000, // DEBUG: 5 Seconds for testing
-    BREAK_DURATION_DEFAULT_MS: 10 * 60 * 1000, // 10 Minutes
+    WORK_DURATION_MS: 2 * 60 * 60 * 1000, 
+    BREAK_DURATION_DEFAULT_MS: 10 * 60 * 1000,
 };
 
 const MOCK_USERS = [
@@ -16,22 +10,20 @@ const MOCK_USERS = [
     { username: 'user2', password: '123', name: 'Jon Snow', dept: 'Human Resource', role: 'user' }
 ];
 
-// --- State Management ---
 const state = {
     currentView: 'login-view',
     timerInterval: null,
     remainingTime: 0,
     isWorkSession: false,
-    isPaused: false, // New state for pause
-    workTimerStatus: 'Ready', // 'Running', 'Paused', 'Ready'
+    isPaused: false, 
+    workTimerStatus: 'Ready', 
     currentActivity: null,
-    currentUser: null, // { username, name, dept, role }
+    currentUser: null, 
     logs: JSON.parse(localStorage.getItem('ewms_logs')) || [],
-    workStartTime: null, // Track when work session started
-    breakStartTime: null, // Track when break started
+    workStartTime: null, 
+    breakStartTime: null, 
 };
 
-// --- DOM Elements ---
 const views = {
     login: document.getElementById('login-view'),
     dashboard: document.getElementById('dashboard-view'),
@@ -68,15 +60,10 @@ const elements = {
 };
 
 function updateDashboardForRole() {
-    // Both admins and users can view logs now, but the content differs.
-    // We could hide the button for users if we wanted, but the requirement says "dashboard will only display the activity log made by THAT user".
-    // So we keep the button for everyone.
     elements.viewLogsBtn.style.display = 'block';
 }
 
-// ... (AlarmService, NotificationService, ViewManager remain the same) ...
 
-// --- Audio Service (Alarm) ---
 const AlarmService = {
     audioContext: null,
     oscillator: null,
@@ -95,7 +82,7 @@ const AlarmService = {
 
         osc.type = 'sine';
         osc.frequency.setValueAtTime(440, ctx.currentTime); // A4
-        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.1); // Sweep up
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.1); 
 
         gain.gain.setValueAtTime(0.1, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
@@ -106,7 +93,6 @@ const AlarmService = {
         osc.start();
         osc.stop(ctx.currentTime + 0.5);
 
-        // Loop for a few beeps
         let count = 0;
         const interval = setInterval(() => {
             count++;
@@ -129,7 +115,6 @@ const AlarmService = {
     }
 };
 
-// --- Notification Service ---
 const NotificationService = {
     requestPermission() {
         if ('Notification' in window) {
@@ -138,12 +123,10 @@ const NotificationService = {
     },
 
     show(title, body) {
-        // 1. Browser Notification
         if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(title, { body, icon: 'favicon.ico' }); // Icon is optional
+            new Notification(title, { body, icon: 'favicon.ico' }); 
         }
 
-        // 2. In-App Toast
         this.showToast(title, body);
     },
 
@@ -160,24 +143,20 @@ const NotificationService = {
         `;
         container.appendChild(toast);
 
-        // Remove after 5 seconds (matches CSS animation)
         setTimeout(() => {
             toast.remove();
         }, 5000);
     }
 };
 
-// --- View Manager ---
 function switchView(viewId) {
-    // Hide all views
     Object.values(views).forEach(el => {
-        if (el && !el.classList.contains('modal')) { // Don't hide modal via this loop if it's separate
+        if (el && !el.classList.contains('modal')) { 
             el.classList.remove('active');
             el.classList.add('hidden');
         }
     });
 
-    // Handle Modal separately
     if (viewId === 'break-modal') {
         views.modal.classList.remove('hidden');
         return;
@@ -185,11 +164,9 @@ function switchView(viewId) {
         views.modal.classList.add('hidden');
     }
 
-    // Show target view
     const target = document.getElementById(viewId);
     if (target) {
         target.classList.remove('hidden');
-        // Small delay to allow display:block to apply before opacity transition
         setTimeout(() => {
             target.classList.add('active');
         }, 10);
@@ -197,7 +174,6 @@ function switchView(viewId) {
     state.currentView = viewId;
 }
 
-// --- Timer Logic ---
 function formatTime(ms) {
     const totalSeconds = Math.floor(ms / 1000);
     const hours = Math.floor(totalSeconds / 3600);
@@ -214,10 +190,10 @@ function startWorkTimer() {
     state.isWorkSession = true;
     state.isPaused = false;
     state.remainingTime = CONFIG.WORK_DURATION_MS;
-    state.workStartTime = new Date(); // Record work start time
+    state.workStartTime = new Date();
     updateTimerDisplay(elements.workTimerDisplay);
+    elements.workTimerDisplay.classList.add('active-timer'); 
 
-    // UI Updates
     elements.startWorkBtn.style.display = 'none';
     elements.pauseBtn.style.display = 'block';
     elements.resumeBtn.style.display = 'none';
@@ -240,8 +216,8 @@ function startWorkTimer() {
 function pauseWorkTimer() {
     if (state.timerInterval) clearInterval(state.timerInterval);
     state.isPaused = true;
+    elements.workTimerDisplay.classList.remove('active-timer'); 
 
-    // UI Updates
     elements.pauseBtn.style.display = 'none';
     elements.resumeBtn.style.display = 'block';
     elements.timerStatus.textContent = "Timer paused";
@@ -249,8 +225,8 @@ function pauseWorkTimer() {
 
 function resumeWorkTimer() {
     state.isPaused = false;
+    elements.workTimerDisplay.classList.add('active-timer'); 
 
-    // UI Updates
     elements.pauseBtn.style.display = 'block';
     elements.resumeBtn.style.display = 'none';
     elements.timerStatus.textContent = "Time until next wellness break";
@@ -274,8 +250,8 @@ function resetWorkDashboard() {
     state.isPaused = false;
     state.remainingTime = CONFIG.WORK_DURATION_MS;
     updateTimerDisplay(elements.workTimerDisplay);
+    elements.workTimerDisplay.classList.remove('active-timer');
 
-    // UI Updates
     elements.startWorkBtn.style.display = 'block';
     elements.pauseBtn.style.display = 'none';
     elements.resumeBtn.style.display = 'none';
@@ -286,7 +262,7 @@ function resetWorkDashboard() {
 function startBreakTimer(durationMs) {
     state.isWorkSession = false;
     state.remainingTime = durationMs;
-    state.breakStartTime = new Date(); // Record break start time
+    state.breakStartTime = new Date(); 
     updateTimerDisplay(elements.breakTimerDisplay);
 
     if (state.timerInterval) clearInterval(state.timerInterval);
@@ -315,12 +291,12 @@ function triggerBreak() {
 }
 
 function finishBreak() {
+    AlarmService.playAlarm();
+    NotificationService.show("Break Complete!", "Time to get back to work. You're refreshed and ready!");
     switchView('compliance-view');
 }
 
-// --- Event Handlers ---
 
-// Login
 elements.loginForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const username = elements.usernameInput.value.trim();
@@ -330,11 +306,14 @@ elements.loginForm.addEventListener('submit', (e) => {
 
     if (user) {
         state.currentUser = user;
-        elements.userDisplay.textContent = `Logged in as ${user.name}${user.dept ? ' (' + user.dept + ')' : ''}`;
 
-        // Initialize Audio Context on user gesture
+        elements.userDisplay.textContent = user.name;
+        document.querySelector('.user-role-label').textContent = user.role;
+
+        const initials = user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        document.getElementById('user-avatar').textContent = initials;
+
         AlarmService.init();
-        // Request Notification Permission
         NotificationService.requestPermission();
 
         if (user.role === 'admin') {
@@ -342,8 +321,7 @@ elements.loginForm.addEventListener('submit', (e) => {
             switchView('admin-view');
         } else {
             switchView('dashboard-view');
-            resetWorkDashboard(); // Ensure dashboard is in "Ready" state
-            // Update dashboard UI based on role
+            resetWorkDashboard(); 
             updateDashboardForRole();
         }
     } else {
@@ -351,22 +329,18 @@ elements.loginForm.addEventListener('submit', (e) => {
     }
 });
 
-// Start Work
 elements.startWorkBtn.addEventListener('click', () => {
     startWorkTimer();
 });
 
-// Pause Work
 elements.pauseBtn.addEventListener('click', () => {
     pauseWorkTimer();
 });
 
-// Resume Work
 elements.resumeBtn.addEventListener('click', () => {
     resumeWorkTimer();
 });
 
-// Logout
 elements.logoutBtn.addEventListener('click', () => {
     if (state.timerInterval) clearInterval(state.timerInterval);
     state.currentUser = { name: '', dept: '' };
@@ -375,23 +349,19 @@ elements.logoutBtn.addEventListener('click', () => {
     switchView('login-view');
 });
 
-// Debug: Trigger Break Immediately
 document.getElementById('debug-break-btn').addEventListener('click', () => {
     if (state.timerInterval) clearInterval(state.timerInterval);
     triggerBreak();
 });
 
-// Modal: Start Break
 document.getElementById('start-break-btn').addEventListener('click', () => {
     switchView('activity-view');
 });
 
-// Modal: Skip Break
 elements.skipBreakBtn.addEventListener('click', () => {
     skipBreak();
 });
 
-// Activity Selection
 document.querySelectorAll('.activity-card').forEach(card => {
     card.addEventListener('click', () => {
         const activity = card.dataset.activity;
@@ -408,13 +378,11 @@ document.querySelectorAll('.activity-card').forEach(card => {
     });
 });
 
-// Finish Break Early
 document.getElementById('finish-break-early-btn').addEventListener('click', () => {
     clearInterval(state.timerInterval);
     finishBreak();
 });
 
-// Compliance Form
 document.getElementById('compliance-form').addEventListener('submit', (e) => {
     e.preventDefault();
 
@@ -434,25 +402,23 @@ document.getElementById('compliance-form').addEventListener('submit', (e) => {
 });
 
 function saveLog(fileName, fileData, feedback) {
-    // Calculate durations
     const breakEndTime = new Date();
     const workDurationMs = state.workStartTime ? (new Date() - state.workStartTime) : CONFIG.WORK_DURATION_MS;
     const breakDurationMs = state.breakStartTime ? (breakEndTime - state.breakStartTime) : 0;
 
-    // Log Data
     const log = {
         date: new Date().toISOString(),
         user: state.currentUser,
         activity: state.currentActivity,
         proof: fileName,
-        proofData: fileData, // Store Base64 string
+        proofData: fileData, 
         feedback: feedback || 'No feedback',
         completed: true,
         skipped: false,
-        workDuration: formatTime(workDurationMs), // Human-readable format
-        breakDuration: formatTime(breakDurationMs), // Human-readable format
-        workDurationMs: workDurationMs, // Raw milliseconds for calculations
-        breakDurationMs: breakDurationMs // Raw milliseconds for calculations
+        workDuration: formatTime(workDurationMs),
+        breakDuration: formatTime(breakDurationMs),
+        workDurationMs: workDurationMs,
+        breakDurationMs: breakDurationMs 
     };
 
     try {
@@ -460,28 +426,23 @@ function saveLog(fileName, fileData, feedback) {
         localStorage.setItem('ewms_logs', JSON.stringify(state.logs));
     } catch (err) {
         alert("Storage full! Could not save proof image. (LocalStorage limit reached)");
-        // Fallback: save without image data
         log.proofData = null;
         log.proof = fileName + " (Storage Full)";
-        state.logs.pop(); // Remove failed attempt
+        state.logs.pop(); 
         state.logs.push(log);
         localStorage.setItem('ewms_logs', JSON.stringify(state.logs));
     }
 
-    // Reset Form
     elements.proofInput.value = '';
     elements.feedbackInput.value = '';
 
-    // Return to Work
     switchView('dashboard-view');
     resetWorkDashboard();
 }
 
 function skipBreak() {
-    // Calculate work duration
     const workDurationMs = state.workStartTime ? (new Date() - state.workStartTime) : CONFIG.WORK_DURATION_MS;
 
-    // Log skipped break
     const log = {
         date: new Date().toISOString(),
         user: state.currentUser,
@@ -500,7 +461,6 @@ function skipBreak() {
     state.logs.push(log);
     localStorage.setItem('ewms_logs', JSON.stringify(state.logs));
 
-    // Return to Work
     switchView('dashboard-view');
     resetWorkDashboard();
 }
@@ -514,7 +474,6 @@ function calculateComplianceRate(logs) {
     return Math.round((completedBreaks / totalBreaks) * 100);
 }
 
-// View Logs
 elements.viewLogsBtn.addEventListener('click', () => {
     renderActivityLogs();
     switchView('admin-view');
@@ -522,18 +481,12 @@ elements.viewLogsBtn.addEventListener('click', () => {
 
 elements.closeAdminBtn.addEventListener('click', () => {
     if (state.currentUser && state.currentUser.role === 'admin') {
-        // Admin logout
         state.currentUser = null;
         elements.usernameInput.value = '';
         elements.passwordInput.value = '';
         switchView('login-view');
     } else {
-        // Regular user returns to dashboard
         switchView(state.isWorkSession ? 'dashboard-view' : 'login-view');
-        // Note: The original logic had a fallback to login-view if not work session, 
-        // but for a logged-in user viewing logs, they should go back to dashboard unless they logged out.
-        // However, if they are viewing logs, they are logged in.
-        // Let's be safer:
         if (state.currentUser) {
             switchView('dashboard-view');
         } else {
@@ -546,7 +499,6 @@ function renderActivityLogs() {
     let logsToShow = state.logs;
 
     if (state.currentUser.role !== 'admin') {
-        // Filter for plain users
         logsToShow = state.logs.filter(log => log.user.username === state.currentUser.username);
         elements.closeAdminBtn.textContent = "Close";
     } else {
@@ -556,8 +508,8 @@ function renderActivityLogs() {
     elements.totalBreaksStat.textContent = logsToShow.length;
     elements.totalSkipsStat.textContent = logsToShow.filter(log => log.skipped === true).length;
     elements.complianceRateStat.textContent = calculateComplianceRate(logsToShow) + '%';
-    elements.logsList.innerHTML = logsToShow.map(log => `
-        <li style="flex-direction: column; gap: 0.5rem; align-items: flex-start;">
+    elements.logsList.innerHTML = logsToShow.map((log, index) => `
+        <li class="activity-log-item" data-log-index="${index}" style="flex-direction: column; gap: 0.5rem; align-items: flex-start; cursor: pointer; transition: background 0.2s;">
             <div style="display: flex; justify-content: space-between; width: 100%;">
                 <span style="font-weight: bold; color: var(--primary-color)">${log.user.name} <small style="color: #94a3b8">(${log.user.dept || 'N/A'})</small></span>
                 <span>${new Date(log.date).toLocaleString()}</span>
@@ -576,8 +528,95 @@ function renderActivityLogs() {
             </div>
         </li>
     `).join('');
+
+    document.querySelectorAll('.activity-log-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const logIndex = parseInt(item.dataset.logIndex);
+            showActivityDetail(logsToShow[logIndex]);
+        });
+
+        item.addEventListener('mouseenter', () => {
+            item.style.background = 'rgba(255, 255, 255, 0.05)';
+        });
+
+        item.addEventListener('mouseleave', () => {
+            item.style.background = '';
+        });
+    });
 }
 
-// --- Init ---
-// Start at Login
+function showActivityDetail(log) {
+    const detailBody = document.getElementById('activity-detail-body');
+    const statusBadge = log.skipped ? '<span class="status-badge skipped">SKIPPED</span>' : '<span class="status-badge completed">COMPLETED</span>';
+
+    detailBody.innerHTML = `
+        <div class="detail-container">
+            <div class="detail-header">
+                <h2>${log.activity}</h2>
+                <p>${new Date(log.date).toLocaleString()}</p>
+                ${statusBadge}
+            </div>
+            
+            <div class="detail-grid">
+                <div class="detail-card">
+                    <h4>Employee</h4>
+                    <p class="detail-value">${log.user.name}</p>
+                    <p class="detail-sub">${log.user.dept || 'N/A'}</p>
+                </div>
+                
+                <div class="detail-card">
+                    <h4>Role</h4>
+                    <p class="detail-value" style="text-transform: capitalize;">${log.user.role}</p>
+                </div>
+            </div>
+            
+            ${!log.skipped ? `
+            <div class="detail-grid">
+                <div class="detail-card work-card">
+                    <h4>⏱️ Work Duration</h4>
+                    <p class="detail-value">${log.workDuration || 'N/A'}</p>
+                </div>
+                
+                <div class="detail-card break-card">
+                    <h4>☕ Break Duration</h4>
+                    <p class="detail-value">${log.breakDuration || 'N/A'}</p>
+                </div>
+            </div>
+            ` : ''}
+            
+            <div class="detail-card">
+                <h4>Feedback</h4>
+                <p class="detail-feedback">"${log.feedback}"</p>
+            </div>
+            
+            <div class="detail-card">
+                <h4>Proof of Activity</h4>
+                <p class="detail-sub" style="margin-bottom: 0.5rem;">${log.proof}</p>
+                ${log.proofData ? `<img src="${log.proofData}" alt="Proof" class="detail-image">` : '<p class="no-image">No image attached</p>'}
+            </div>
+        </div>
+    `;
+
+    document.getElementById('activity-detail-modal').classList.remove('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const closeDetailBtn = document.getElementById('close-detail-modal');
+    const detailModal = document.getElementById('activity-detail-modal');
+
+    if (closeDetailBtn) {
+        closeDetailBtn.addEventListener('click', () => {
+            detailModal.classList.add('hidden');
+        });
+    }
+
+    if (detailModal) {
+        detailModal.addEventListener('click', (e) => {
+            if (e.target === detailModal) {
+                detailModal.classList.add('hidden');
+            }
+        });
+    }
+});
+
 switchView('login-view');
