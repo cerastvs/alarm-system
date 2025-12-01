@@ -208,12 +208,46 @@ function formatTime(ms) {
 
 function startWorkTimer() {
     state.isWorkSession = true;
+    state.isPaused = false;
     state.remainingTime = CONFIG.WORK_DURATION_MS;
     updateTimerDisplay(elements.workTimerDisplay);
 
     // UI Updates
     elements.startWorkBtn.style.display = 'none';
+    elements.pauseBtn.style.display = 'block';
+    elements.resumeBtn.style.display = 'none';
     elements.debugBreakBtn.style.display = 'block';
+    elements.timerStatus.textContent = "Time until next wellness break";
+
+    if (state.timerInterval) clearInterval(state.timerInterval);
+
+    state.timerInterval = setInterval(() => {
+        state.remainingTime -= 1000;
+        updateTimerDisplay(elements.workTimerDisplay);
+
+        if (state.remainingTime <= 0) {
+            clearInterval(state.timerInterval);
+            triggerBreak();
+        }
+    }, 1000);
+}
+
+function pauseWorkTimer() {
+    if (state.timerInterval) clearInterval(state.timerInterval);
+    state.isPaused = true;
+
+    // UI Updates
+    elements.pauseBtn.style.display = 'none';
+    elements.resumeBtn.style.display = 'block';
+    elements.timerStatus.textContent = "Timer paused";
+}
+
+function resumeWorkTimer() {
+    state.isPaused = false;
+
+    // UI Updates
+    elements.pauseBtn.style.display = 'block';
+    elements.resumeBtn.style.display = 'none';
     elements.timerStatus.textContent = "Time until next wellness break";
 
     if (state.timerInterval) clearInterval(state.timerInterval);
@@ -232,11 +266,14 @@ function startWorkTimer() {
 function resetWorkDashboard() {
     if (state.timerInterval) clearInterval(state.timerInterval);
     state.isWorkSession = false;
+    state.isPaused = false;
     state.remainingTime = CONFIG.WORK_DURATION_MS;
     updateTimerDisplay(elements.workTimerDisplay);
 
     // UI Updates
     elements.startWorkBtn.style.display = 'block';
+    elements.pauseBtn.style.display = 'none';
+    elements.resumeBtn.style.display = 'none';
     elements.debugBreakBtn.style.display = 'none';
     elements.timerStatus.textContent = "Ready to start?";
 }
@@ -311,6 +348,16 @@ elements.loginForm.addEventListener('submit', (e) => {
 // Start Work
 elements.startWorkBtn.addEventListener('click', () => {
     startWorkTimer();
+});
+
+// Pause Work
+elements.pauseBtn.addEventListener('click', () => {
+    pauseWorkTimer();
+});
+
+// Resume Work
+elements.resumeBtn.addEventListener('click', () => {
+    resumeWorkTimer();
 });
 
 // Logout
