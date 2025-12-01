@@ -48,6 +48,7 @@ const elements = {
     activityNameDisplay: document.getElementById('current-activity-name'),
     logsList: document.getElementById('activity-logs-list'),
     totalBreaksStat: document.getElementById('total-breaks-stat'),
+    totalSkipsStat: document.getElementById('total-skips-stat'),
     complianceRateStat: document.getElementById('compliance-rate-stat'),
     userDisplay: document.getElementById('user-display'),
     loginForm: document.getElementById('login-form'),
@@ -553,6 +554,7 @@ function renderActivityLogs() {
     }
 
     elements.totalBreaksStat.textContent = logsToShow.length;
+    elements.totalSkipsStat.textContent = logsToShow.filter(log => log.skipped === true).length;
     elements.complianceRateStat.textContent = calculateComplianceRate(logsToShow) + '%';
     elements.logsList.innerHTML = logsToShow.map(log => `
         <li style="flex-direction: column; gap: 0.5rem; align-items: flex-start;">
